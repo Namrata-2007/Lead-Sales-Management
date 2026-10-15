@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://crm_user:secure_pwd@postgres:5432/elevator_crm
+      - JWT_SECRET=production_super_secret_jwt_key_2026
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
+      - AI_MODEL=gemini-3.8-flash
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/elevator-lead-automation
+    depends_on:
+      - postgres
+      - n8n
+    restart: always
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=crm_user
+      - POSTGRES_PASSWORD=secure_pwd
+      - POSTGRES_DB=elevator_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=AdminPassword123!
+    volumes:
+      - n8ndata:/home/node/.n8n
+    restart: always
+
+volumes:
+  pgdata:
+  n8ndata:

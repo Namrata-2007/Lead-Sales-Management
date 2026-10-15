@@ -1,0 +1,6 @@
+{
+  "name": "ElevateAI CRM - Automated Elevator SaaS",
+  "description": "Enterprise AI-automated CRM SaaS for elevator companies. Features automated lead scoring, AI qualification, smart salesperson routing, quotation engineering, pipeline Kanban, and workflow engines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

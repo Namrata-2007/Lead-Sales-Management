@@ -1,0 +1,105 @@
+{
+  "name": "ElevateCRM Automated Lead & Follow-Up Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "elevator-lead-automation",
+        "options": {}
+      },
+      "name": "Incoming Lead Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json[\"lead\"][\"aiScore\"]}}",
+              "operation": "largerEqual",
+              "value2": 75
+            }
+          ]
+        }
+      },
+      "name": "Is High Priority Lead (Score >= 75)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [360, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#elevator-urgent-leads",
+        "text": "🔥 High-Priority Lead Detected: {{$json[\"lead\"][\"name\"]}} ({{$json[\"lead\"][\"buildingType\"]}}, {{$json[\"lead\"][\"floors\"]}} floors) - Score: {{$json[\"lead\"][\"aiScore\"]}}/100."
+      },
+      "name": "Alert Sales Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [620, 200]
+    },
+    {
+      "parameters": {
+        "unit": "hours",
+        "amount": 24
+      },
+      "name": "Wait 24 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [620, 420]
+    },
+    {
+      "parameters": {
+        "url": "={{$env[\"APP_URL\"]}}/api/automation/run-escalation",
+        "method": "POST"
+      },
+      "name": "Check Lead Contact Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [880, 420]
+    }
+  ],
+  "connections": {
+    "Incoming Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "Is High Priority Lead (Score >= 75)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is High Priority Lead (Score >= 75)?": {
+      "main": [
+        [
+          {
+            "node": "Alert Sales Team",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 24 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 24 Hours": {
+      "main": [
+        [
+          {
+            "node": "Check Lead Contact Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
