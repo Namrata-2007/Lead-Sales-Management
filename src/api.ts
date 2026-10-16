@@ -16,7 +16,16 @@ import {
   DashboardData
 } from './types';
 
-const BASE_URL = '/api';
+function getBaseUrl(): string {
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+  if (!envUrl) {
+    return '/api';
+  }
+  const clean = envUrl.endsWith('/') ? envUrl.slice(0, -1) : envUrl;
+  return clean.endsWith('/api') ? clean : `${clean}/api`;
+}
+
+const BASE_URL = getBaseUrl();
 
 function getHeaders(): HeadersInit {
   const token = localStorage.getItem('elevate_token');

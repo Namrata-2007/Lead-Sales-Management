@@ -46,7 +46,11 @@ export interface DatabaseSchema {
   settings: SystemSettings;
 }
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+// Detect serverless execution environment (e.g. Vercel / AWS Lambda) where process.cwd() is read-only
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT);
+const DATA_DIR = isServerless
+  ? '/tmp/elevator_crm_data'
+  : path.resolve(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'elevator_crm_db.json');
 
 function getInitialData(): DatabaseSchema {
@@ -922,8 +926,12 @@ class Database {
   }
 
   private ensureDataDir() {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+    } catch (e) {
+      console.warn('Could not ensure database directory (operating in memory):', e);
     }
   }
 
@@ -934,7 +942,7 @@ class Database {
         return JSON.parse(raw);
       }
     } catch (e) {
-      console.error('Error reading database file, initializing fresh seed:', e);
+      console.warn('Error reading database file, initializing fresh seed:', e);
     }
     const initial = getInitialData();
     this.saveDirect(initial);
@@ -948,7 +956,7 @@ class Database {
       fs.writeFileSync(tempFile, JSON.stringify(dataToSave, null, 2), 'utf-8');
       fs.renameSync(tempFile, DB_FILE);
     } catch (e) {
-      console.error('Failed to write database file:', e);
+      console.warn('Filesystem write notice (persisting in-memory):', e);
     }
   }
 

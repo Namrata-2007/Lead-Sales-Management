@@ -44,32 +44,49 @@ export function requireRole(allowedRoles: UserRole[]) {
   };
 }
 
+// Health check endpoint for testing deployment connectivity
+router.get('/health', (req: Request, res: Response) => {
+  return res.json({
+    status: 'ok',
+    service: 'ElevateAI CRM SaaS API',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // -----------------------------------------------------------------------------
 // AUTHENTICATION ROUTES
 // -----------------------------------------------------------------------------
 router.post('/auth/login', (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    const cleanPassword = typeof password === 'string' ? password : '';
+
+    const user = db.getUserByEmail(cleanEmail);
+    if (!user || !verifyPassword(cleanPassword, user.passwordHash)) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ error: 'Account has been disabled. Contact your administrator.' });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const { passwordHash, ...safeUser } = user;
+    return res.json({ token, user: safeUser });
+  } catch (err: any) {
+    console.error('Login error:', err);
+    return res.status(500).json({ error: 'Authentication service encountered an error' });
   }
-
-  const user = db.getUserByEmail(email);
-  if (!user || !verifyPassword(password, user.passwordHash)) {
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
-
-  if (!user.isActive) {
-    return res.status(403).json({ error: 'Account has been disabled. Contact your administrator.' });
-  }
-
-  const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
-
-  const { passwordHash, ...safeUser } = user;
-  return res.json({ token, user: safeUser });
 });
 
 router.post('/auth/register', (req: Request, res: Response) => {
